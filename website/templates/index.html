@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Election Voting</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-4">Blockchain Election Voting System</h1>
+
+       
+        <div class="flex justify-center mb-4">
+            <input id="voter-id" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Enter Voter ID" required>
+        </div>
+
+      
+        <div class="flex justify-center mb-8">
+            <button type="button" onclick="validateVoterIdAndGenerateKeys()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Generate Keys</button>
+        </div>
+
+      
+        <div id="keys-container" class="text-center mt-4"></div>
+
+  
+        <form id="vote-form" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" action="/submit_vote" method="post" onsubmit="return validateForm()">
+            <h2 class="text-lg font-bold mb-4">Vote:</h2>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="public-key">Public Key:</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="public-key" name="public-key" type="text" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="private-key">Private Key:</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="private-key" name="private-key" type="text" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="candidate">Select Candidate:</label>
+                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="candidate" name="candidate">
+                    <option value="" disabled selected>Select One</option>
+                    <option value="Biden">Biden</option>
+                    <option value="Trump">Trump</option>
+                </select>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Vote</button>
+            </div>
+        </form>
+        <script>
+            function validateForm() {
+                var selectElement = document.getElementById('candidate');
+                var selectedValue = selectElement.value;
+            
+                if (selectedValue === '') {
+                    alert('Please select a valid candidate.');
+                    return false; 
+                }
+            
+                return true;  
+            }
+            </script>
+        
+      
+        <div id="message" class="text-center text-gray-700"></div>
+        
+        
+        <div class="flex justify-center mt-8">
+            <form action="/verify_vote" method="get">
+                <button type="submit" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">Verify all Votes</button>
+            </form>
+        </div>
+
+
+        <div class="flex justify-center mt-8 mb-4">
+            <input type="text" id="private-vote-key" placeholder="Enter your private key" required>
+            <button id = "verify-my-vote-button" class = "bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"> Verify my Vote </button>
+            <script>
+                document.getElementById('verify-my-vote-button').addEventListener('click', function() {
+                    let privateKey = document.getElementById('private-vote-key').value;
+                    if (!privateKey) {
+            alert('Please enter your private key.');
+            return;
+        }
+            fetch(`/verify_my_vote?private-vote-key=${encodeURIComponent(privateKey)}`)
+                    .then(response => response.json())
+                    .then(data =>document.getElementById('verification-result').innerHTML = 'You voted for: ' + data.block);
+                });
+                </script>
+        
+        </div>
+        
+       
+        <div id="verification-result" class="text-center mt-4"></div>
+        
+    
+        <script>
+         
+            function validateVoterIdAndGenerateKeys() {
+                const voterId = document.getElementById('voter-id').value;
+            
+                if (validateVoterId(voterId)) {
+                    generateKeys();
+                } else {
+                    alert('Invalid Voter ID. Please enter a valid Voter ID.');
+                }
+            }
+
+            
+            function generateKeys() {
+                let voterId = document.getElementById('voter-id').value;
+
+                fetch(`/generate_keys?voter_id=${voterId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data)
+                        const keysContainer = document.getElementById('keys-container');
+                        if(data.public_key){
+                            keysContainer.innerHTML = `
+                                <p>Your public key: ${data.public_key}</p>
+                                <p>Your private key: ${data.private_key}</p>
+                                <button class="border border-blue-500 rounded py-1 px-2 mx-1 bg-blue-500 hover:bg-blue-700 text-white font-bold" onclick="copyToClipboard('${data.public_key}')">Copy Public Key</button>
+                                <button class="border border-blue-500 rounded py-1 px-2 mx-1 bg-blue-500 hover:bg-blue-700 text-white font-bold" onclick="copyToClipboard('${data.private_key}')">Copy Private Key</button>
+                            `;
+                        }else{
+                            keysContainer.innerHTML = `
+                                <p>You already have generated a key. Please refer to your local
+                                    election committee to get your keys re-generated. </p>
+                            `;
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            
+            function copyToClipboard(text) {
+                const tempInput = document.createElement('input');
+                tempInput.value = text;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                alert('Copied to clipboard: ' + text);
+            }
+            fetch(`/verify_my_vote?private-key=${encodeURIComponent(privateKey)}`)
+            .then(response => response.json())
+            .then(data => console.log(data));
+            function validateVoterId(voterId) {
+                return voterId !== '';
+            }
+        </script>
+    </div>
+</body>
+</html>
